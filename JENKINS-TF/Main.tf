@@ -38,7 +38,7 @@ resource "aws_instance" "web" {
   user_data              = templatefile("./install_jenkins.sh", {})
 
   tags = {
-    Name = "Jenkins-sonar"
+    Name = "amazon-Ec2"
   }
   root_block_device {
     volume_size = 30
