@@ -1,9 +1,9 @@
-resource "aws_security_group" "Jenkins-sg" {
-  name        = "Jenkins-Security Group"
-  description = "Open 22,443,80,8080,9000"
+# Create a security group with inbound rules for ports 22, 80, 443, 8080, 9000, and 3000
+resource "aws_security_group" "my-sg-jenkins" {
+  name        = "my-sg-jenkins"
+  description = "Security Group for Jenkins"
 
-  # Define a single ingress rule to allow traffic on all specified ports
-  ingress = [
+ ingress = [
     for port in [22, 80, 443, 8080, 9000, 3000] : {
       description      = "TLS from VPC"
       from_port        = port
@@ -24,23 +24,38 @@ resource "aws_security_group" "Jenkins-sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "Jenkins-sg"
-  }
+  # Add any additional security group settings here
+  
 }
+resource "tls_private_key" "rsa-4096" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+variable "key_name" {}
 
-
+# Create an AWS key pair (replace "your-key-name" with your desired key pair name)
+resource "aws_key_pair" "key-pair" {
+  key_name = var.key_name
+  public_key =   tls_private_key.rsa-4096.public_key_openssh
+}
+resource "local_file" "private_key" {
+  content  = tls_private_key.rsa-4096.private_key_pem
+  filename = var.key_name
+}
+# Create an AWS EC2 instance with the specified instance type, security group, and key pair
 resource "aws_instance" "web" {
-  ami                    = "ami-0f5ee92e2d63afc18"
+  ami                    = "ami-0b6c2d49148000cd5"  # Replace with your desired AMI
   instance_type          = "t2.large"
-  key_name               = "SouthAmerica"
-  vpc_security_group_ids = [aws_security_group.Jenkins-sg.id]
-  user_data              = templatefile("./install_jenkins.sh", {})
+  vpc_security_group_ids = [aws_security_group.my-sg-jenkins.id]
+  key_name               = aws_key_pair.key-pair.key_name
+  user_data = templatefile("./install_jenkins.sh", {})
 
-  tags = {
-    Name = "amazon-Ec2"
-  }
-  root_block_device {
-    volume_size = 30
-  }
+tags = {
+  Name = "Terraform-Jenkins"
 }
+root_block_device {
+  volume_size = 30
+}
+}
+
+
